@@ -31,7 +31,7 @@ def plot_weather_data(
     # extract 2m temperature (variable name in the dataset is "t2m")
     weather_variable_array = weather_array[weather_variable_name].isel(valid_time=time_idx)
 
-    if weather_variable_name == "t2m":
+    if weather_variable_name == "t2m" or weather_variable_name == "d2m":
         # convert to Celsius if values look like Kelvin
         if weather_variable_array.mean().item() > 200:
             weather_variable_array = weather_variable_array - 273.15
@@ -90,9 +90,11 @@ def animate_weather_data(
     weather_variable_array = weather_array[weather_variable_name]
     # set default units and convert Kelvin->C if needed
     units = weather_array[weather_variable_name].attrs.get("units", "")
-    if weather_variable_name == "t2m" and weather_variable_array.mean().item() > 200:
-        weather_variable_array = weather_variable_array - 273.15
-        units = "°C"
+    if weather_variable_name == "t2m" or weather_variable_name == "d2m":
+        # convert to Celsius if values look like Kelvin
+        if weather_variable_array.mean().item() > 200:
+            weather_variable_array = weather_variable_array - 273.15
+            units = "°C"
         
     aspect_ratio = len(lat) / len(lon)
     fig, ax = plt.subplots(figsize=(20, 20 * aspect_ratio))

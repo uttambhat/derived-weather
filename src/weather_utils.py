@@ -36,7 +36,7 @@ def pull_era5_reanalysis(
         'format': 'netcdf',
         'variable': variables,
         'date': f'{start_date}/{end_date}',
-        'area': [lat_range[0], lon_range[0], lat_range[1], lon_range[1]],
+        'area': [lat_range[1], lon_range[0], lat_range[0], lon_range[1]],
     }
     
     client.retrieve('reanalysis-era5-land', request, output_file)
