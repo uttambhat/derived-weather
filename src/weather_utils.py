@@ -1,4 +1,6 @@
 import cdsapi
+import inspect
+import numpy as np
 import xarray as xr
 from typing import Tuple, List
 import zipfile
@@ -15,15 +17,23 @@ def pull_era5_reanalysis(
     """
     Pull ERA5 reanalysis weather data for specified region and time period.
     
-    Args:
-        lat_range: Tuple of (min_latitude, max_latitude)
-        lon_range: Tuple of (min_longitude, max_longitude)
-        start_date: Start date in 'YYYY-MM-DD' format
-        end_date: End date in 'YYYY-MM-DD' format
-        variables: List of ERA5 variable names. Defaults to common variables.
-        output_file: Output NetCDF filename
+    Args
+    ----
+    lat_range: Tuple[float, float]
+        Tuple of (min_latitude, max_latitude)
+    lon_range: Tuple[float, float]
+        Tuple of (min_longitude, max_longitude)
+    start_date: str
+        Start date in 'YYYY-MM-DD' format
+    end_date: str
+        End date in 'YYYY-MM-DD' format
+    variables: List[str]
+        List of ERA5 variable names. Defaults to common variables.
+    output_file: str
+        Output NetCDF filename
     
-    Returns:
+    Returns
+    -------
         xarray.Dataset containing the downloaded ERA5 data
     """
     if variables is None:
@@ -64,3 +74,41 @@ def pull_era5_reanalysis(
         output_file = extracted_path
 
     return xr.open_dataset(output_file)
+
+
+def apply_formula_to_weather_variables(
+    weather_array: xr.Dataset,
+    formula: callable,
+    new_variable_name: str = "custom_variable"
+) -> xr.Dataset:
+    """
+    Apply a mathematical formula to existing weather variables to create a new variable.
+    
+    Args
+    ----
+    weather_array: xr.Dataset
+        xarray.Dataset containing weather data
+    formula: callable,
+        callable function that takes in weather variables as arguments
+    new_variable_name: str
+        Name for the new variable to be created
+
+    Returns
+    -------
+        xarray.Dataset with the new variable added
+    """
+    # Extract variable names from the formula's argument names
+    arg_names = inspect.getfullargspec(formula).args
+
+    # Ensure all required variables are present in the dataset
+    for var in arg_names:
+        if var not in weather_array:
+            raise ValueError(f"Variable '{var}' required by formula is not in the dataset.")
+
+    # Apply the formula across the dataset
+    new_variable_data = formula(**{var: weather_array[var] for var in arg_names})
+
+    # Add the new variable to the dataset
+    weather_array[new_variable_name] = new_variable_data
+
+    return weather_array

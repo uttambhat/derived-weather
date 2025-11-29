@@ -57,7 +57,7 @@ def animate_weather_data(
     weather_variable_name: str = "t2m",
     time_range: tuple[int, int] = (0, 10),
     interval: int = 500,
-    output_filepath: Optional[str] = "../resources/weather_animation.mp4",
+    output_filepath: Optional[str] = None,
 ) -> None:
     """
     Animate a heatmap of the weather variable across time steps
