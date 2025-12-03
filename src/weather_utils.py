@@ -79,6 +79,7 @@ def pull_era5_reanalysis(
 def apply_formula_to_weather_variables(
     weather_array: xr.Dataset,
     formula: callable,
+    formula_kwargs: dict = None,
     new_variable_name: str = "custom_variable"
 ) -> xr.Dataset:
     """
@@ -90,6 +91,8 @@ def apply_formula_to_weather_variables(
         xarray.Dataset containing weather data
     formula: callable,
         callable function that takes in weather variables as arguments
+    formula_kwargs: dict, optional
+        Additional keyword arguments to pass to the formula
     new_variable_name: str
         Name for the new variable to be created
 
@@ -99,16 +102,49 @@ def apply_formula_to_weather_variables(
     """
     # Extract variable names from the formula's argument names
     arg_names = inspect.getfullargspec(formula).args
+    if formula_kwargs is None:
+        formula_kwargs = {}
+    weather_variable_names = [arg_name for arg_name in arg_names if arg_name not in formula_kwargs]
 
     # Ensure all required variables are present in the dataset
-    for var in arg_names:
-        if var not in weather_array:
+    for var in weather_variable_names:
+        if (var not in weather_array) and (var not in formula_kwargs):
             raise ValueError(f"Variable '{var}' required by formula is not in the dataset.")
 
-    # Apply the formula across the dataset
-    new_variable_data = formula(**{var: weather_array[var] for var in arg_names})
+    # Apply the formula across the dataset along with any additional kwargs
+    new_variable_data = formula(**{var: weather_array[var] for var in weather_variable_names} | formula_kwargs)
 
     # Add the new variable to the dataset
     weather_array[new_variable_name] = new_variable_data
 
     return weather_array
+
+
+def weather_score(
+    t2m: xr.DataArray,
+    d2m: xr.DataArray,
+    t2m_ideal_c: float = 10.0,
+    d2m_ideal_c: float = 0.0,
+    t2m_width_c: float = 10.0,
+    d2m_width_c: float = 10.0,
+):
+    """Calculate a simple weather score based on temperature and dew point temperature.
+
+    Args:
+        t2m (xr.DataArray): 2-meter temperature.
+        d2m (xr.DataArray): 2-meter dew point temperature.
+        t2m_ideal_c (float): Ideal temperature in Celsius.
+        d2m_ideal_c (float): Ideal dew point temperature in Celsius.
+        t2m_width_c (float): Width of the temperature preference in Celsius.
+        d2m_width_c (float): Width of the dew point temperature preference in Celsius.
+
+    Returns:
+        xr.DataArray: Weather score.
+    """
+    t2m_ideal_k = t2m_ideal_c + 273.15  # Ideal temperature in Kelvin
+    d2m_ideal_k = d2m_ideal_c + 273.15  # Ideal dew point temperature in Kelvin
+    t2m_zscore = (t2m - t2m_ideal_k) / t2m_width_c
+    d2m_zscore = (d2m - d2m_ideal_k) / d2m_width_c
+    score = np.exp(-t2m_zscore**2) * np.exp(-d2m_zscore**2)
+    return score
+
