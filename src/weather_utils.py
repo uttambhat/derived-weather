@@ -148,3 +148,29 @@ def weather_score(
     score = np.exp(-t2m_zscore**2) * np.exp(-d2m_zscore**2)
     return score
 
+
+def weather_score_general(
+    weather_variables_list: List[xr.DataArray],
+    ideal_values_list: List[float],
+    widths_list: List[float],
+):
+    """Calculate a weather score based on multiple weather variables.
+
+    Args:
+        weather_variables_list (List[xr.DataArray]): List of weather variable DataArrays.
+        ideal_values_list (List[float]): List of ideal values for each weather variable.
+        widths_list (List[float]): List of widths for each weather variable.
+
+    Returns:
+        xr.DataArray: Weather score.
+    """
+    if not (len(weather_variables_list) == len(ideal_values_list) == len(widths_list)):
+        raise ValueError("All input lists must have the same length.")
+
+    score = xr.ones_like(weather_variables_list[0])
+
+    for var, ideal, width in zip(weather_variables_list, ideal_values_list, widths_list):
+        zscore = (var - ideal) / width
+        score *= np.exp(-zscore**2)
+
+    return score
