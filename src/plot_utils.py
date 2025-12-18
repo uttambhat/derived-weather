@@ -9,6 +9,8 @@ def plot_weather_data(
     weather_array: xr.Dataset,
     weather_variable_name: str = "t2m",
     time_idx: int = 0,
+    latitude_range: Optional[tuple[float, float]] = None,
+    longitude_range: Optional[tuple[float, float]] = None,
 ) -> None:
     """
     Plot a heatmap of the weather variable
@@ -21,6 +23,10 @@ def plot_weather_data(
         Variable name to plot (default is "t2m" for 2m temperature)
     time_idx: int
         Time index to plot (default is 0 for the first time step)
+    latitude_range: Optional[tuple[float, float]]
+        Optional latitude range to zoom into a subset the data (min_lat, max_lat)
+    longitude_range: Optional[tuple[float, float]]
+        Optional longitude range to zoom into a subset the data (min_lon, max_lon)
 
     Returns
     -------
@@ -45,6 +51,10 @@ def plot_weather_data(
     aspect_ratio = len(lat) / len(lon)
     plt.figure(figsize=(20, 20 * aspect_ratio))
     pcm = plt.pcolormesh(lon, lat, weather_variable_array, shading="auto", cmap="coolwarm")
+    if latitude_range:
+        plt.ylim(latitude_range)
+    if longitude_range:
+        plt.xlim(longitude_range)
     plt.xlabel("Longitude")
     plt.ylabel("Latitude")
     plt.title(f"{weather_variable_name} at {str(time)}")
@@ -56,6 +66,8 @@ def animate_weather_data(
     weather_array: xr.Dataset,
     weather_variable_name: str = "t2m",
     time_range: tuple[int, int] = (0, 10),
+    latitude_range: Optional[tuple[float, float]] = None,
+    longitude_range: Optional[tuple[float, float]] = None,
     interval: int = 500,
     output_filepath: Optional[str] = None,
 ) -> None:
@@ -70,6 +82,10 @@ def animate_weather_data(
         Variable name to plot (default is "t2m" for 2m temperature)
     time_range: tuple[int, int]
         Start and end time indices (inclusive) for animation
+    latitude_range: Optional[tuple[float, float]]
+        Optional latitude range to zoom into a subset the data (min_lat, max_lat)
+    longitude_range: Optional[tuple[float, float]]
+        Optional longitude range to zoom into a subset the data (min_lon, max_lon)
     interval: int
         Delay between frames in milliseconds (default is 500)
     output_filepath: Optional[str]
@@ -109,6 +125,10 @@ def animate_weather_data(
         vmin, vmax = None, None
 
     pcm = ax.pcolormesh(lon, lat, weather_data_values, shading="auto", cmap="coolwarm", vmin=vmin, vmax=vmax)
+    if latitude_range:
+        ax.set_ylim(latitude_range)
+    if longitude_range:
+        ax.set_xlim(longitude_range)
     ax.set_xlabel("Longitude")
     ax.set_ylabel("Latitude")
     title = ax.set_title("")
