@@ -1,10 +1,12 @@
 import cdsapi
 import inspect
 import numpy as np
+import pandas as pd
 import xarray as xr
 from typing import Tuple, List
 import zipfile
 import os
+import requests
 
 def pull_era5_reanalysis(
     lat_range: Tuple[float, float],
@@ -75,6 +77,64 @@ def pull_era5_reanalysis(
 
     return xr.open_dataset(output_file)
 
+
+def pull_nws_forecast_openmeteo(
+    latitude: float,
+    lon: float,
+    current_variables: List[str] = None,
+    hourly_variables: List[str] = None,
+    output_file: str = "nws_forecast.nc"
+) -> xr.Dataset:
+    """
+    Pull NWS forecast data from Open-Meteo API.
+    
+    Args
+    ----
+    latitude: float
+        Latitude of the location
+    lon: float
+        Longitude of the location
+    current_variables: List[str]
+        List of current weather variables. Defaults to common variables.
+    hourly_variables: List[str]
+        List of hourly weather variables. Defaults to common variables.
+    output_file: str
+        Output NetCDF filename
+    
+    Returns
+    -------
+        xarray.Dataset containing the forecast data
+    """
+    
+    if current_variables is None:
+        current_variables = ['temperature_2m', 'wind_speed_10m']
+    if hourly_variables is None:
+        hourly_variables = ['temperature_2m', 'relative_humidity_2m', 'wind_speed_10m']
+    
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        'latitude': latitude,
+        'longitude': lon,
+        'current': ','.join(current_variables),
+        'hourly': ','.join(hourly_variables)
+    }
+    
+    response = requests.get(url, params=params)
+    response.raise_for_status()
+    data = response.json()
+    
+    # Convert hourly data to xarray Dataset
+    hourly_data = data['hourly']
+    times = pd.to_datetime(hourly_data['time'])
+    
+    data_vars = {var: (['time'], hourly_data[var]) for var in hourly_variables}
+    ds = xr.Dataset(data_vars, coords={'time': times})
+    
+    # Add current data as metadata or as a separate dimension if needed
+    ds.attrs['current'] = data['current']
+    
+    ds.to_netcdf(output_file)
+    return ds
 
 def apply_formula_to_weather_variables(
     weather_array: xr.Dataset,
